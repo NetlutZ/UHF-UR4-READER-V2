@@ -1,0 +1,10 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="UHF-UR4-READER-V2:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/UHF_UR4_READER_V2_jar</output-path>
+    <root id="archive" name="UHF-UR4-READER-V2.jar">
+      <element id="directory" name="META-INF">
+        <element id="file-copy" path="$PROJECT_DIR$/src/main/resources/META-INF/MANIFEST.MF" />
+      </element>
+    </root>
+  </artifact>
+</component>
