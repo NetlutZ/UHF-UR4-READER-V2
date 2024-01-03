@@ -8,6 +8,8 @@ import org.example.utils.StringUtils;
 
 import javax.swing.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 public class Main {
     public static void main(String[] args) {
@@ -17,6 +19,17 @@ public class Main {
 
     public Main() {
         initUR4();
+       Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+           @Override
+           public void run() {
+               System.out.println("Shutdown hook ran!");
+               if (ur4 != null) {
+                   inventoryForm.stopInventory();
+                   ur4.free();
+               }
+           }
+       }));
+
     }
 
     InventoryForm inventoryForm = new InventoryForm();
@@ -27,19 +40,20 @@ public class Main {
     String port = "8888";
 
     private void initUR4() {
-        if (ur4Network == null) {
-            ur4Network = new RFIDWithUHFNetworkUR4();
-            ur4 = ur4Network;
-        }
-
-//        if (ur4SerialPort == null) {
-//            ur4SerialPort = new RFIDWithUHFSerialPortUR4();
-//            ur4 = ur4SerialPort;
+//        if (ur4Network == null) {
+//            ur4Network = new RFIDWithUHFNetworkUR4();
+//            ur4 = ur4Network;
 //        }
+
+        if (ur4SerialPort == null) {
+            ur4SerialPort = new RFIDWithUHFSerialPortUR4();
+            ur4 = ur4SerialPort;
+        }
 
 
         if (ur4 instanceof RFIDWithUHFSerialPortUR4) {
             String com = (String) "COM" + 4;
+//            System.out.println(ur4SerialPort);
             boolean rsult = ur4SerialPort.init(com);
             if (!rsult) {
                 System.out.println("Failed to open the serial port!");

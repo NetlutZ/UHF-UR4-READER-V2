@@ -19,11 +19,16 @@ public class InventoryTableModel extends AbstractTableModel {
     private List<UHFTAGInfo> uhftagInfoList = new ArrayList<>();
     private int total = 0;
     public String[] columnNames = {"INDEX", "EPC", "TID", "USER", "RSSI", "Count", "Ant"};
-    String fileName = "./date.txt";
+    String fileName = "";
     public InventoryTableModel() {
     }
 
     public void addData(UHFTAGInfo info) {
+        if (System.getProperty("os.name").toLowerCase().contains("win")) {
+            fileName = "./date.txt";
+        } else {
+            fileName = "/home/pi/date.txt";
+        }
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
         LocalDateTime now = LocalDateTime.now();
 
