@@ -6,7 +6,6 @@ public class StringUtils {
 
 
     /**
-     * 字符串是否为空
      * @param src
      * @return
      */
@@ -15,7 +14,6 @@ public class StringUtils {
     }
 
     /**
-     * 是否为十六进制数
      * @param str
      * @return
      */
@@ -24,7 +22,6 @@ public class StringUtils {
             return false;
         }
 
-        // 长度必须是偶数
         if (str.length() % 2 == 0) {
             String validate = "(?i)[0-9a-f]+";
             return str.matches(validate);
@@ -43,7 +40,6 @@ public class StringUtils {
     }
 
     /**
-     * 判断IP地址是否合法
      * @param src
      * @return
      */
@@ -51,7 +47,6 @@ public class StringUtils {
         if(isEmpty(src)) {
             return false;
         }
-        // 判断IP格式和范围
         final String regexIp = "([1-9]|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])"
                 + "(\\.(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])){3}";
         return src.matches(regexIp);
