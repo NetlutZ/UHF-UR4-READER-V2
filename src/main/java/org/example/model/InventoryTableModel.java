@@ -1,6 +1,7 @@
 package org.example.model;
 
 import com.rscja.deviceapi.entity.UHFTAGInfo;
+import okhttp3.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -57,23 +58,13 @@ public class InventoryTableModel extends AbstractTableModel {
 
         if (exists[0]) {
             UHFTAGInfo temp = uhftagInfoList.get(index);
-
-            try {
-                java.net.URL url = new URL(URL + "/device"+"?rfid="+temp.getEPC());
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                connection.setRequestMethod("GET");
-
-                int status = connection.getResponseCode();
-
-                BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-                String line;
-                StringBuffer response = new StringBuffer();
-
-                while ((line = reader.readLine()) != null) {
-                    response.append(line);
-                }
-                reader.close();
-                String jsonResponse = response.toString().replaceAll("\\},\\{", "},\n{");
+            OkHttpClient client = new OkHttpClient();
+            Request request = new Request.Builder()
+                    .url(URL + "/device"+"?rfid="+temp.getEPC())
+                    .get()
+                    .build();
+            try (Response response = client.newCall(request).execute()) {
+                String jsonResponse = response.body().string().replaceAll("\\},\\{", "},\n{");
                 // System.out.println("Response: \n" + jsonResponse);
 
                 if(jsonResponse.equals("[]")){
@@ -88,48 +79,30 @@ public class InventoryTableModel extends AbstractTableModel {
                         int deviceId = obj.getInt("id");
 
                         if(!statusString.equals("Borrowed")){
-                            try {
-                                URL url2 = new URL(URL + "/device/" + deviceId);
-                                HttpURLConnection connection2 = (HttpURLConnection) url2.openConnection();
-                                connection2.setRequestMethod("PUT");
-                                connection2.setRequestProperty("Content-Type", "application/json");
+                            OkHttpClient client2 = new OkHttpClient();
+                            RequestBody formbody = new FormBody.Builder()
+                                    .add("rfidStatus", "InStorage")
+                                    .add("lastScan", currentDateTime)
+                                    .build();
+                            Request request2 = new Request.Builder()
+                                    .url(URL + "/device/" + deviceId)
+                                    .put(formbody)
+                                    .build();
+                            try (Response response2 = client2.newCall(request2).execute()) {
+                                // System.out.println("Response Code: " + response2.code());
+                                // System.out.println("Response: " + response2.body().string());
 
-                                String payload = "{\"rfidStatus\":\"InStorage\", \"lastScan\":\"" + currentDateTime + "\"}";     //TODO set foreign key to null
-                                connection2.setDoOutput(true);
-                                connection2.setDoInput(true);
-
-                                try (OutputStream os = connection2.getOutputStream()) {
-                                    byte[] input = payload.getBytes(StandardCharsets.UTF_8);
-                                    os.write(input, 0, input.length);
-                                }
-
-                                int responseCode2 = connection2.getResponseCode();
-                                // System.out.println("Response Code: " + responseCode2);
-
-                                // Read response
-                                BufferedReader reader2 = new BufferedReader(new InputStreamReader(connection2.getInputStream()));
-                                String line2;
-                                StringBuffer response2 = new StringBuffer();
-
-                                while ((line2 = reader2.readLine()) != null) {
-                                    response2.append(line2);
-                                }
-                                reader2.close();
-                                // System.out.println("Response: " + response2.toString());
-                                connection2.disconnect();
-                            }catch (Exception e) {
+                            } catch (Exception e) {
                                 System.out.println(e);
                             }
+
                         }
                     }
 
                 }
 
-
-                connection.disconnect();
-            }
-            catch (Exception e) {
-                System.out.println(e);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
 
 

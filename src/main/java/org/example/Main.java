@@ -3,6 +3,7 @@ package org.example;
 import com.rscja.deviceapi.RFIDWithUHFNetworkUR4;
 import com.rscja.deviceapi.RFIDWithUHFSerialPortUR4;
 import com.rscja.deviceapi.interfaces.IUR4;
+import okhttp3.*;
 import org.example.form.InventoryForm;
 import org.example.utils.StringUtils;
 import org.json.JSONArray;
@@ -45,7 +46,7 @@ public class Main {
 
     public Main() {
         initUR4();
-        Runtime.getRuntime().addShutdownHook(new Thread(){
+        Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
             public void run() {
                 System.out.println("Shutdown hook ran!");
@@ -74,32 +75,19 @@ public class Main {
                 System.out.println("Task performed on " + new java.util.Date());
 
                 // Check Device that Loss more than 20 seconds(change second in server)
-                try {
-                    java.net.URL url = new URL(URL + "/device/check/loss");
-                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                    connection.setRequestMethod("GET");
-
-                    int responseCode = connection.getResponseCode();
-                    // System.out.println("Response Code: " + responseCode);
-
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-                    String line;
-                    StringBuffer response = new StringBuffer();
-
-                    while ((line = reader.readLine()) != null) {
-                        response.append(line);
-                    }
-                    reader.close();
-
-                    //  String jsonResponse = response.toString().replaceAll("\\},\\{", "},\n{");
-                    //  System.out.println("Response: \n" + jsonResponse);
-
-                    // create array to keep id of device that loss
-                    JSONArray jsonArray = new JSONArray(response.toString());
+                OkHttpClient client = new OkHttpClient();
+                Request request = new Request.Builder()
+                        .url(URL + "/device/check/loss")
+                        .get()
+                        .build();
+                try (Response response = client.newCall(request).execute()) {
+                    String jsonResponse = response.body().string();
+                    // System.out.println("Response: \n" + jsonResponse);
+                    JSONArray jsonArray = new JSONArray(jsonResponse);
                     for (int i = 0; i < jsonArray.length(); i++) {
                         JSONObject obj = jsonArray.getJSONObject(i);
                         int id = obj.getInt("id");
-                        System.out.println("ID: " + id);
+//                        System.out.println("ID: " + id);
                         idList.add(id);
                     }
 
@@ -111,126 +99,77 @@ public class Main {
                         }
                     }
 
-                    // System.out.println("idString: " + idString);
-                    connection.disconnect();
+                    System.out.println("idString: " + idString);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
 
-
                 // Get Latest LossActivityID
-                try {
-                    URL url2 = new URL(URL + "/activity/lastest/loss");
-                    HttpURLConnection connection2 = (HttpURLConnection) url2.openConnection();
-                    connection2.setRequestMethod("GET");
-
-                    int responseCode2 = connection2.getResponseCode();
-                    // System.out.println("Response Code: " + responseCode2);
-
-                    BufferedReader reader2 = new BufferedReader(new InputStreamReader(connection2.getInputStream()));
-                    String line2;
-                    StringBuffer response2 = new StringBuffer();
-
-                    while ((line2 = reader2.readLine()) != null) {
-                        response2.append(line2);
-                    }
-                    reader2.close();
-
-                    // System.out.println("Response: " + response.toString());
-                    String jsonResponse2 = response2.toString().replaceAll("\\},\\{", "},\n{");
-
-                    if(jsonResponse2.equals("null")){
+                client = new OkHttpClient();
+                request = new Request.Builder()
+                        .url(URL + "/activity/lastest/loss")
+                        .get()
+                        .build();
+                try (Response response = client.newCall(request).execute()) {
+                    String jsonResponse = response.body().string();
+                    // System.out.println("Response: \n" + jsonResponse);
+                    if (jsonResponse.equals("null")) {
                         lastLossActivityID = 0;
-                    }else{
+                    } else {
                         // Get ActivityCode and Cut it to Remain Only Number
-                        JSONObject obj = new JSONObject(jsonResponse2);
+                        JSONObject obj = new JSONObject(jsonResponse);
                         String activityCode = obj.getString("activityCode");
                         String[] splitActivityCode = activityCode.split("L");       //TODO: Can Change
                         lastLossActivityID = Integer.parseInt(splitActivityCode[1]);
                         // System.out.println("lastLossActivityID: " + lastLossActivityID);
                         lastLossActivityID++;
                     }
-
-                    connection2.disconnect();
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
 
                 // Post Request to Activity
                 if (!idString.equals("")) {
-                    try {
-                        URL url2 = new URL(URL + "/activity");
-                        HttpURLConnection connection2 = (HttpURLConnection) url2.openConnection();
-                        connection2.setRequestMethod("POST");
-                        connection2.setRequestProperty("Content-Type", "application/json");
-
-                        //TODO: Can Change
-                        String payload = "{\"activityCode\":\"L" + lastLossActivityID + "\",\"activityDate\":\"" + currentDateTime + "\",\"activityTime\":\"" + currentDateTime.substring(11, 19) + "\",\"device\":\"" + idString + "\"}";
-                        connection2.setDoOutput(true);
-                        DataOutputStream outputStream = new DataOutputStream(connection2.getOutputStream());
-                        outputStream.writeBytes(payload);
-                        outputStream.flush();
-                        outputStream.close();
-
-                        int responseCode2 = connection2.getResponseCode();
-                        // System.out.println("Response Code: " + responseCode2);
-
-                        BufferedReader reader2 = new BufferedReader(new InputStreamReader(connection2.getInputStream()));
-                        String line2;
-                        StringBuffer response2 = new StringBuffer();
-
-                        while ((line2 = reader2.readLine()) != null) {
-                            response2.append(line2);
-                        }
-                        reader2.close();
-
-                        // System.out.println("Response: " + response.toString());
-                        String jsonResponse2 = response2.toString().replaceAll("\\},\\{", "},\n{");
-                        // System.out.println("Response: \n" + jsonResponse2);
-
-                        //get id of activity that just created
-                        JSONObject obj = new JSONObject(jsonResponse2);
+                    client = new OkHttpClient();
+                    RequestBody formbody = new FormBody.Builder()
+                            .add("activityCode", "L" + lastLossActivityID)
+                            .add("activityDate", currentDateTime)
+                            .add("activityTime", currentDateTime.substring(11, 19))
+                            .add("device", idString)
+                            .build();
+                    // String payload = "{\"activityCode\":\"L" + lastLossActivityID + "\",\"activityDate\":\"" + currentDateTime + "\",\"activityTime\":\"" + currentDateTime.substring(11, 19) + "\",\"device\":\"" + idString + "\"}";
+                    // RequestBody body = RequestBody.create(payload, MediaType.parse("application/json; charset=utf-8"));
+                    request = new Request.Builder()
+                            .url(URL + "/activity")
+                            .post(formbody)
+                            .build();
+                    try (Response response = client.newCall(request).execute()) {
+                        String jsonResponse = response.body().string();
+                        // System.out.println("Response: \n" + jsonResponse);
+                        JSONObject obj = new JSONObject(jsonResponse);
                         newLossActivityID = obj.getInt("id");
                         idString = "";
-                        connection2.disconnect();
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
                 }
 
-
                 // Update ActivityId and Status for Device that Loss
                 for (int i = 0; i < idList.size(); i++) {
-                    try {
-                        URL url2 = new URL(URL + "/device/" + idList.get(i));
-                        HttpURLConnection connection2 = (HttpURLConnection) url2.openConnection();
-                        connection2.setRequestMethod("PUT");
-                        connection2.setRequestProperty("Content-Type", "application/json");
-
-                        String payload = "{\"rfidStatus\":\"Loss\",\"activityId\":\"" + newLossActivityID + "\"}";    //TODO: Can Change
-                        connection2.setDoOutput(true);
-                        connection2.setDoInput(true); // Set to receive a response
-
-                        // Open output stream and write payload
-                        try (OutputStream os = connection2.getOutputStream()) {
-                            byte[] input = payload.getBytes(StandardCharsets.UTF_8);
-                            os.write(input, 0, input.length);
-                        }
-
-                        int responseCode2 = connection2.getResponseCode();
-                        // System.out.println("Response Code: " + responseCode2);
-
-                        // Read response
-                        BufferedReader reader2 = new BufferedReader(new InputStreamReader(connection2.getInputStream()));
-                        String line2;
-                        StringBuffer response2 = new StringBuffer();
-
-                        while ((line2 = reader2.readLine()) != null) {
-                            response2.append(line2);
-                        }
-                        reader2.close();
-                        // System.out.println("Response: " + response2.toString());
-                        connection2.disconnect();
+                    client = new OkHttpClient();
+                    RequestBody formbody = new FormBody.Builder()
+                            .add("rfidStatus", "Loss")
+                            .add("activityId", String.valueOf(newLossActivityID))
+                            .build();
+                    // String payload = "{\"rfidStatus\":\"Loss\",\"activityId\":\"" + newLossActivityID + "\"}";    //TODO: Can Change
+                    // RequestBody body = RequestBody.create(payload, MediaType.parse("application/json; charset=utf-8"));
+                    request = new Request.Builder()
+                            .url(URL + "/device/" + idList.get(i))
+                            .put(formbody)
+                            .build();
+                    try (Response response = client.newCall(request).execute()) {
+                        String jsonResponse = response.body().string();
+                        // System.out.println("Response: \n" + jsonResponse);
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -242,15 +181,15 @@ public class Main {
     }
 
     private void initUR4() {
-        if (ur4Network == null) {
-            ur4Network = new RFIDWithUHFNetworkUR4();
-            ur4 = ur4Network;
-        }
-
-//        if (ur4SerialPort == null) {
-//            ur4SerialPort = new RFIDWithUHFSerialPortUR4();
-//            ur4 = ur4SerialPort;
+//        if (ur4Network == null) {
+//            ur4Network = new RFIDWithUHFNetworkUR4();
+//            ur4 = ur4Network;
 //        }
+
+        if (ur4SerialPort == null) {
+            ur4SerialPort = new RFIDWithUHFSerialPortUR4();
+            ur4 = ur4SerialPort;
+        }
 
 
         if (ur4 instanceof RFIDWithUHFSerialPortUR4) {
