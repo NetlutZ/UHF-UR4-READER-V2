@@ -99,7 +99,7 @@ public class Main {
                         }
                     }
 
-                    System.out.println("idString: " + idString);
+                    System.out.println("Loss Device ID  : " + idString);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -181,19 +181,19 @@ public class Main {
     }
 
     private void initUR4() {
-//        if (ur4Network == null) {
-//            ur4Network = new RFIDWithUHFNetworkUR4();
-//            ur4 = ur4Network;
-//        }
-
-        if (ur4SerialPort == null) {
-            ur4SerialPort = new RFIDWithUHFSerialPortUR4();
-            ur4 = ur4SerialPort;
+        if (ur4Network == null) {
+            ur4Network = new RFIDWithUHFNetworkUR4();
+            ur4 = ur4Network;
         }
+
+//        if (ur4SerialPort == null) {
+//            ur4SerialPort = new RFIDWithUHFSerialPortUR4();
+//            ur4 = ur4SerialPort;
+//        }
 
 
         if (ur4 instanceof RFIDWithUHFSerialPortUR4) {
-            String com = (String) "COM" + 4;
+            String com = (String) "COM" + 47;
             boolean rsult = ur4SerialPort.init(com);
             if (!rsult) {
                 System.out.println("Failed to open the serial port!");

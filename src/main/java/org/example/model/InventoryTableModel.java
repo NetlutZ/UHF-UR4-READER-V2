@@ -10,11 +10,10 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Properties;
+import java.util.*;
 
 public class InventoryTableModel extends AbstractTableModel {
 
@@ -24,6 +23,7 @@ public class InventoryTableModel extends AbstractTableModel {
     String fileName = "";
     String URL;
     Properties properties = new Properties();
+    private HashMap<String, LocalDateTime> EPCScan = new HashMap<String, LocalDateTime>();
     public InventoryTableModel() {
     }
 
@@ -57,6 +57,16 @@ public class InventoryTableModel extends AbstractTableModel {
 
 
         if (exists[0]) {
+            Duration duration = Duration.between(EPCScan.get(info.getEPC()), now);
+            long seconds = duration.getSeconds();
+            if(seconds > 60){
+                System.out.println(EPCScan.get(info.getEPC()) + " Edited");
+                EPCScan.put(info.getEPC(), now);
+                updateDevice(info.getEPC(), currentDateTime);
+            }
+            System.out.println(EPCScan.get(info.getEPC()));
+
+            /*
             UHFTAGInfo temp = uhftagInfoList.get(index);
             OkHttpClient client = new OkHttpClient();
             Request request = new Request.Builder()
@@ -104,10 +114,62 @@ public class InventoryTableModel extends AbstractTableModel {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+             */
 
 
         } else {
             uhftagInfoList.add(index, info);
+            EPCScan.put(info.getEPC(), now);
+            updateDevice(info.getEPC(), currentDateTime);
+        }
+    }
+
+    private void updateDevice(String rfid, String currentDateTime) {
+        OkHttpClient client = new OkHttpClient();
+        Request request = new Request.Builder()
+                .url(URL + "/device"+"?rfid="+rfid)
+                .get()
+                .build();
+        try (Response response = client.newCall(request).execute()) {
+            String jsonResponse = response.body().string().replaceAll("\\},\\{", "},\n{");
+            // System.out.println("Response: \n" + jsonResponse);
+
+            if(jsonResponse.equals("[]")){
+
+            }else{
+                JSONArray jsonArray = new JSONArray(jsonResponse);
+
+                for(int i=0;i<jsonArray.length();i++){      // for duplicate rfid tag
+                    JSONObject obj = jsonArray.getJSONObject(i);
+
+                    String statusString = obj.getString("rfidStatus");
+                    int deviceId = obj.getInt("id");
+
+                    if(!statusString.equals("Borrowed")){
+                        OkHttpClient client2 = new OkHttpClient();
+                        RequestBody formbody = new FormBody.Builder()
+                                .add("rfidStatus", "InStorage")
+                                .add("lastScan", currentDateTime)
+                                .build();
+                        Request request2 = new Request.Builder()
+                                .url(URL + "/device/" + deviceId)
+                                .put(formbody)
+                                .build();
+                        try (Response response2 = client2.newCall(request2).execute()) {
+                            // System.out.println("Response Code: " + response2.code());
+                            // System.out.println("Response: " + response2.body().string());
+
+                        } catch (Exception e) {
+                            System.out.println(e);
+                        }
+
+                    }
+                }
+
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
