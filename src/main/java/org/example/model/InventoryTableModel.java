@@ -66,57 +66,6 @@ public class InventoryTableModel extends AbstractTableModel {
             }
             System.out.println(EPCScan.get(info.getEPC()));
 
-            /*
-            UHFTAGInfo temp = uhftagInfoList.get(index);
-            OkHttpClient client = new OkHttpClient();
-            Request request = new Request.Builder()
-                    .url(URL + "/device"+"?rfid="+temp.getEPC())
-                    .get()
-                    .build();
-            try (Response response = client.newCall(request).execute()) {
-                String jsonResponse = response.body().string().replaceAll("\\},\\{", "},\n{");
-                // System.out.println("Response: \n" + jsonResponse);
-
-                if(jsonResponse.equals("[]")){
-
-                }else{
-                    JSONArray jsonArray = new JSONArray(jsonResponse);
-
-                    for(int i=0;i<jsonArray.length();i++){      // for duplicate rfid tag
-                        JSONObject obj = jsonArray.getJSONObject(i);
-
-                        String statusString = obj.getString("rfidStatus");
-                        int deviceId = obj.getInt("id");
-
-                        if(!statusString.equals("Borrowed")){
-                            OkHttpClient client2 = new OkHttpClient();
-                            RequestBody formbody = new FormBody.Builder()
-                                    .add("rfidStatus", "InStorage")
-                                    .add("lastScan", currentDateTime)
-                                    .build();
-                            Request request2 = new Request.Builder()
-                                    .url(URL + "/device/" + deviceId)
-                                    .put(formbody)
-                                    .build();
-                            try (Response response2 = client2.newCall(request2).execute()) {
-                                // System.out.println("Response Code: " + response2.code());
-                                // System.out.println("Response: " + response2.body().string());
-
-                            } catch (Exception e) {
-                                System.out.println(e);
-                            }
-
-                        }
-                    }
-
-                }
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-             */
-
-
         } else {
             uhftagInfoList.add(index, info);
             EPCScan.put(info.getEPC(), now);
